@@ -1,4 +1,5 @@
 from dataclasses import dataclass, asdict
+from typing import Type
 
 
 @dataclass
@@ -11,15 +12,15 @@ class InfoMessage:
     speed: float
     calories: float
     OUTPUT_MESSAGE = (
-        "Тип тренировки: {}; "
-        "Длительность: {:.3f} ч.; "
-        "Дистанция: {:.3f} км; "
-        "Ср. скорость: {:.3f} км/ч; "
-        "Потрачено ккал: {:.3f}."
+        "Тип тренировки: {training_type}; "
+        "Длительность: {duration:.3f} ч.; "
+        "Дистанция: {distance:.3f} км; "
+        "Ср. скорость: {speed:.3f} км/ч; "
+        "Потрачено ккал: {calories:.3f}."
     )
 
     def get_message(self) -> str:
-        return self.OUTPUT_MESSAGE.format(*asdict(self).values())
+        return self.OUTPUT_MESSAGE.format(**asdict(self))
 
 
 @dataclass
@@ -67,7 +68,8 @@ class Running(Training):
     def get_spent_calories(self) -> float:
         return (
             (
-                self.CALORIES_MEAN_SPEED_MULTIPLIER * self.get_mean_speed()
+                self.CALORIES_MEAN_SPEED_MULTIPLIER
+                * self.get_mean_speed()
                 + self.CALORIES_MEAN_SPEED_SHIFT
             )
             * self.weight
@@ -81,10 +83,8 @@ class Running(Training):
 class SportsWalking(Training):
     """Тренировка: спортивная ходьба."""
 
-    # Для перевода скорости из км/ч в м/с
-    # делим количество метров в километре (1000)
-    # на количество секунд в одном часе (60 минут * 60 секунд)
-    KMH_IN_MSEC = round(Training.M_IN_KM / (60 * 60), 3)
+    SEC_IN_MIN = 60
+    KMH_IN_MSEC = round(Training.M_IN_KM / (Training.MIN_IN_H * SEC_IN_MIN), 3)
 
     CALORIES_WEIGHT_MULTIPLIER = 0.035
     CALORIES_SPEED_HEIGHT_MULTIPLIER = 0.029
@@ -128,14 +128,17 @@ class Swimming(Training):
 
     def get_spent_calories(self) -> float:
         return (
-            (self.get_mean_speed() + self.CALORIES_MEAN_SPEED_SHIFT)
+            (
+                self.get_mean_speed()
+                + self.CALORIES_MEAN_SPEED_SHIFT
+            )
             * self.CALORIES_WEIGHT_MULTIPLIER
             * self.weight
             * self.duration
         )
 
 
-TRAINING_TYPES: dict = {
+TRAINING_TYPES: dict[str, Type[Training]] = {
     "SWM": Swimming,
     "RUN": Running,
     "WLK": SportsWalking,
@@ -146,9 +149,8 @@ def read_package(workout_type: str, data: list) -> Training:
     """Прочитать данные полученные от датчиков."""
 
     if workout_type not in TRAINING_TYPES:
-        raise Exception("Undefined type of training")
-    else:
-        return TRAINING_TYPES[workout_type](*data)
+        raise ValueError(f"{workout_type} unknown type of training")
+    return TRAINING_TYPES[workout_type](*data)
 
 
 def main(training: Training) -> None:
@@ -158,7 +160,7 @@ def main(training: Training) -> None:
 if __name__ == "__main__":
     packages = [
         ("SWM", [720, 1, 80, 25, 40]),
-        ("RUN", [15000, 1, 75]),
+        ("Rss", [15000, 1, 75]),
         ("WLK", [9000, 1, 75, 180]),
     ]
 
